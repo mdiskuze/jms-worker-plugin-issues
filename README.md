@@ -1,6 +1,3 @@
-# jms-worker-plugin-issues
-Issues for Idea jms-worker-plugin
-
 # JMS Worker Plugin - User Guide
 
 Welcome to the JMS Worker Plugin! This guide will help you get the most out of managing your JMS message queues directly from IntelliJ IDEA.
@@ -43,35 +40,31 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 
 ### Step 1: Add a Connection
 
-1. Open **Preferences/Settings** → **JMS Worker** → **Connections**
-2. Click **Add** (+ button)
-3. Fill in connection details:
+1. Click the **+** button in the Connections toolbar
+2. Fill in connection details:
   - **Name**: Give your connection a meaningful name (e.g., "Dev Artemis")
   - **Type**: Select "Artemis" or "IBM MQ"
   - **Host**: Broker hostname
   - **Port**: Broker port (usually 61616 for Artemis, 1414 for IBM MQ)
   - **Username/Password**: Leave empty if not required
-4. Click **Test Connection** to verify
-5. Click **OK** to save
+3. Click **Test Connection** to verify
+4. Click **OK** to save
 
 ### Step 2: Browse a Queue
 
-1. In the JMS Worker tool window, select your connection from the dropdown
-2. Select a queue from the queue dropdown
-3. You'll see all messages in the queue listed in the table
-4. Click a message to see its full content in the detail pane
+1. In the JMS Worker tool window, you'll see your connections in a tree
+2. **Click the arrow** to expand a connection (queues load on expand)
+3. Click on a queue to browse its messages
+4. Messages appear in the table on the right
+5. Click a message to see details in the split panel below
 
 ### Step 3: Send a Message
 
-1. Right-click on a queue in the queue list
-2. Select **Send Message** (or use the send button in toolbar)
-3. Fill in the message details:
-  - **Queue**: Target queue (pre-filled if you right-clicked)
-  - **Message Format**: TextMessage or BytesMessage
-  - **Body**: Your message content
-  - **Headers** (optional): Correlation ID, Type, Priority, etc.
-4. Click **Send**
-5. You'll see a confirmation message
+1. Right-click on a queue → **Send Message**
+2. Or click the **Send** button in toolbar
+3. **Select connection and queue** from dropdowns (only connected servers shown)
+4. Fill in the message body
+5. Click **Send**
 
 ---
 
@@ -82,7 +75,7 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 #### Apache ActiveMQ Artemis
 - **Host/Port**: Direct TCP connection
 - **Credentials**: Optional username/password
-- **Jolokia** (optional): Management API URL for advanced operations
+- **Jolokia** (optional): Enable for queue creation/deletion
 
 #### IBM MQ
 - **Host/Port**: Queue manager connection
@@ -90,6 +83,14 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 - **Channel**: Channel name (usually "DEV.APP.SVRCONN")
 - **CCSID**: Character encoding (usually 819 for UTF-8)
 - **Credentials**: Often required
+
+### Lazy Loading
+
+Connections now use **lazy loading**:
+- All connections appear immediately in the tree
+- Queues load only when you **expand** a connection
+- Each connection loads independently (no waiting for slow servers)
+- Loading indicator shows "Loading..." while fetching queues
 
 ### Testing Connections
 
@@ -99,104 +100,157 @@ Before saving, always test your connection:
 3. You'll see "Connection successful" or an error message
 4. Only save if the test passes
 
-### Editing Connections
+### Context Menu Actions
 
-1. Go to **Preferences/Settings** → **JMS Worker** → **Connections**
-2. Select a connection and click **Edit**
-3. Modify the settings
-4. Test the connection again
-5. Click **OK** to save
+Right-click on a **connection** for:
+- **Refresh Queues** - Reload queue list
+- **Edit Connection** - Modify settings
+- **Create Queue** - Create new queue (Artemis + Jolokia only)
+- **Send Message to...** - Open send dialog
+- **Connect/Disconnect** - Toggle connection state
+- **Delete Connection** - Remove from settings
 
-### Removing Connections
-
-1. Go to **Preferences/Settings** → **JMS Worker** → **Connections**
-2. Select a connection
-3. Click **Remove** (X button)
-4. Confirm the deletion
+Right-click on a **queue** for:
+- **Browse Queue** - Load messages
+- **Send Message** - Send to this queue
+- **Delete Queue** - Remove queue (Artemis + Jolokia only)
+- **Purge Queue** - Delete all messages
 
 ---
 
 ## Browsing Queues
 
+### Tree Navigation
+
+The left panel shows a tree structure:
+```
+📁 Connections
+  ├── 🟢 Dev Artemis (5 queues)
+  │   ├── 📋 orders.queue (42)
+  │   ├── 📋 payments.queue (0)
+  │   └── ⚠️ DLQ (3)
+  └── 🔴 Prod IBM MQ (not connected)
+```
+
+- 🟢 Green = Connected
+- 🔴 Red = Disconnected
+- ⚠️ Warning = DLQ with messages
+- Numbers in parentheses = message count
+
+### Simplified Queue Names
+
+Queue names are simplified for readability:
+- `orders::orders` displays as just `orders`
+- `address::queue` displays as `queue` (when address equals queue name)
+- Full name is used for API calls
+
+### Message Count vs Loaded
+
+The header shows actual vs loaded count:
+- **"Queue: orders (580 messages, showing 100)"**
+- Click **"Load more (480 remaining)..."** to load additional messages
+
 ### Filtering Messages
 
-The JMS Worker tool window has a search bar at the top:
-- **Search by**: Message body, label, correlation ID, or queue name
-- Type your search term and results update in real-time
-- Leave empty to see all messages
+Use the filter field above the message table:
+- Type to filter by message ID, correlation ID, body content
+- Results update in real-time
+- Clear to see all messages
+
+### Speed Search in Tree
+
+Just start typing while the tree is focused:
+- Matches queue names
+- Press Enter to select match
+- Press Escape to cancel
 
 ### Message Details
 
-Click on any message to see:
-- **Sent Time**: When the message was sent
-- **Message Headers**: Correlation ID, Type, Priority, Delivery Mode, TTL, etc.
-- **Properties**: Custom message properties
-- **Body**: Full message content (with syntax highlighting for JSON/XML)
+Click any message to see the **split detail panel**:
 
-### Large Messages
+**Left side - Body:**
+- Syntax highlighted (JSON/XML auto-detected)
+- Format buttons: JSON | XML
+- Copy button copies **formatted** content
 
-If a message is very large:
-- The table preview shows the first 100 characters
-- Click the message to see the full content
-- Copy button is available in the context menu
+**Right side - Headers & Properties:**
+- Message ID, Correlation ID, Timestamp
+- Type, Priority, Delivery Mode
+- Body type (TEXT/BYTES) and size
+- Custom properties
 
-### Navigating Messages
+### BYTES Messages
 
-The status bar shows: `N messages shown (M total in history)`
-- Scroll to load more messages if there are many in the queue
-- Use Ctrl+F to find within the detail pane
+BYTES messages are **automatically decoded**:
+- Base64 content converted to readable text
+- Original encoding respected (UTF-8, CP912, etc.)
+- Headers show both Base64 and decoded size
 
 ---
 
 ## Sending Messages
 
+### Connection & Queue Selection
+
+The send dialog now includes **dropdowns**:
+- **Connection**: Only shows connected servers
+- **Queue**: Dynamically loads queues for selected connection
+- You can also type a queue name manually
+
 ### Basic Message
 
-1. Click **Send Message** button (or right-click queue → Send Message)
-2. Fill in required fields:
-  - **Queue**: Target queue (required)
-  - **Body**: Message content (required)
-3. Click **Send**
+1. Select connection and queue
+2. Choose **Message Format**: TextMessage or BytesMessage
+3. Type your message body
+4. Click **Send**
 
-### With Headers
+### Message Headers
 
-In the **Message Headers** section:
-- **Correlation ID**: For request/reply patterns (optional)
-- **Type**: JMS message type identifier (optional)
-- **Priority**: 0-4 (normal), 5-9 (expedited), default 4
-- **Persistent**: Check if message should survive broker restart
+Expand **Message Headers** section:
+- **Correlation ID**: For request/reply patterns
+  - ☑️ **Convert ASCII to HEX**: For IBM MQ on AS/400
+- **Type**: JMS message type identifier
+- **Priority**: 0-4 (normal), 5-9 (expedited)
+- **Persistent**: Survives broker restart
 
-### Advanced Options
+### ASCII to HEX Conversion
 
-Click the **Extended Options** arrow to expand:
-- **Reply-To Queue**: Queue where responses should be sent
-- **Time-To-Live (ms)**: How long the message lives before expiring (0 = no expiration)
-- **Group ID**: For message grouping across broker
+For IBM MQ on AS/400 that requires HEX correlation IDs:
+1. Enter correlation ID as ASCII (e.g., `ORDER123`)
+2. Check **"Convert ASCII to HEX"**
+3. Plugin converts to HEX before sending (e.g., `4F524445523132333`)
+
+### Extended Options
+
+Expand **Extended Options** section:
+- **Reply-To Queue**: Where responses should go
+- **Time-To-Live (ms)**: Message expiration (0 = never)
+- **Group ID**: For message grouping (JMSXGroupID)
 
 ### Custom Properties
 
-In the **Custom Properties** section:
-- One property per line in format: `key=value`
+Expand **Custom Properties** section:
+- One property per line: `key=value`
 - Example:
   ```
   environment=production
   version=2.1
+  requestId=abc123
   ```
 
-### Message Format
+### Message Format & Encoding
 
-Select the message format:
 - **TextMessage**: Plain text (default)
-- **BytesMessage**: Binary data with encoding
-  - Choose encoding: UTF-8, UTF-16, ISO-8859-1, ASCII, UTF-32, CP1252, CP912, EBCDIC-US
-  - Useful for special character sets (e.g., CP912 for Cyrillic)
+- **BytesMessage**: Binary with encoding selection
+  - UTF-8 (default)
+  - UTF-16, ISO-8859-1, ASCII
+  - CP1252, CP912, EBCDIC-US (for mainframe)
 
 ### Saving to History
 
-Check **Save to history** to store this message for later reuse:
-- Add a **Label** for easy identification
-- Message is saved with all properties
-- Resend anytime from the History tab
+Expand **History** section:
+- ☑️ **Save to history**: Store for later reuse
+- **Label**: Optional name for easy finding
 
 ---
 
@@ -206,74 +260,84 @@ Check **Save to history** to store this message for later reuse:
 
 Click the **Message History** tab at the bottom of the tool window.
 
+### Same Detail View
+
+History now has the **same split panel** as the queue browser:
+- Body on the left with formatting
+- Headers on the right
+- JSON/XML format buttons
+- Copy formatted content
+
+### BYTES in History
+
+BYTES messages are properly decoded:
+- **Format** column shows TEXT or BYTES
+- Detail view shows decoded content
+- Edit & Send uses decoded body
+
 ### Filtering History
 
-- **Connection**: Filter by which connection the message was sent from
+- **Connection**: Filter by source connection
 - **Queue**: Filter by target queue
-- **Search**: Find messages by body content, label, or correlation ID
+- **Search**: Find by body, label, or correlation ID
 
 ### Resending Messages
 
-1. Select a message from the history table
-2. Click **Resend** button
-3. Confirm the action
-4. Message is sent with original properties
-
-### Editing Before Resend
-
 1. Select a message
-2. Click **Edit & Send**
-3. Modify any details you want to change
-4. Click **Send**
-5. Original message remains in history; new one is added
+2. Click **Resend** → Confirms and sends immediately
+3. Or click **Edit & Send** → Opens in send dialog for modifications
 
-### Labeling Messages
+### Managing History
 
-1. Select a message
-2. Click **Set Label**
-3. Enter a meaningful label (e.g., "Test order #123")
-4. Press Enter
-
-### Deleting Messages from History
-
-1. Right-click a message
-2. Select **Delete**
-3. Confirm deletion (cannot be undone)
-
-### Cleaning Up History
-
-To remove old messages and keep history manageable:
-1. Click **Clear Old** button
-2. Enter number of days (e.g., 30)
-3. All messages older than that date are deleted
-
-To delete everything:
-1. Click **Clear All** button
-2. Confirm deletion (cannot be undone)
+- **Set Label**: Add/edit label for organization
+- **Delete**: Remove single message
+- **Clear Old**: Remove messages older than N days
+- **Clear All**: Delete entire history
 
 ---
 
 ## Advanced Operations
 
-### Moving Messages Between Queues
+### Creating Queues (Artemis)
 
-1. Select a message in the queue browser
-2. Right-click → **Move to Queue**
+Requires Jolokia enabled in connection settings:
+
+1. Right-click on connection → **Create Queue...**
+2. Enter queue name (e.g., `my.new.queue`)
+3. Click OK
+4. Queue appears in tree after refresh
+
+### Deleting Queues (Artemis)
+
+1. Right-click on queue → **Delete Queue**
+2. Confirm deletion
+3. ⚠️ Messages in queue are lost!
+
+### Moving Messages
+
+1. Select one or more messages (Ctrl+click for multi-select)
+2. Right-click → **Move to Queue...**
 3. Select target queue
-4. Message is removed from source and added to target
+4. Messages removed from source, added to target
 
 ### Copying Messages
 
-1. Select a message
-2. Right-click → **Copy to Queue**
+1. Select messages
+2. Right-click → **Copy to Queue...**
 3. Select target queue
-4. Message stays in source, copy is in target
+4. Original stays, copy created in target
 
-### Queue Management
+### Purging Queues
 
-For the selected queue:
-- **Get Message Count**: Shows how many messages are in the queue
-- **Purge Queue**: Remove all messages (⚠️ cannot be undone!)
+1. Right-click on queue → **Purge Queue**
+2. Confirm deletion of ALL messages
+3. ⚠️ Cannot be undone!
+
+### Drag & Drop
+
+Drag messages from table to queue in tree:
+- Moves messages to target queue
+- Visual feedback during drag
 
 ---
 
@@ -281,49 +345,52 @@ For the selected queue:
 
 ### Keyboard Shortcuts
 
-- **Ctrl+F**: Find within message body
-- **Ctrl+C**: Copy selected message body
-- **Delete**: Delete selected message from history
-- **Double-click**: Edit & resend message from history
+| Shortcut | Action |
+|----------|--------|
+| F5 | Refresh current view |
+| Ctrl+F | Focus filter/search field |
+| Delete | Delete selected (in history) |
+| Enter | View message details |
+| Ctrl+C | Copy selected message body |
+| Ctrl+A | Select all messages |
+
+### Splitter Customization
+
+Drag the splitters to resize panels:
+- Hover over splitter → shows accent color
+- Drag to resize
+- Double-click to reset to default
 
 ### Organizing with Labels
 
-Use labels creatively:
+Use descriptive labels:
 - `BUG-123: order processing error`
-- `TEST: batch import #5`
-- `PROD: migration script v2.3`
-
-### Batch Testing
-
-1. Create a template message in history
-2. Duplicate it with different test data:
-  - Edit & Send with variations
-  - All versions stay in history for comparison
+- `TEST: batch import scenario 5`
+- `TEMPLATE: standard order request`
 
 ### Message Templates
 
 Store common messages in history:
-- Order creation requests
-- Payment notifications
-- System alerts
-- Test data
-
-Resend anytime without retyping.
+1. Send a message with "Save to history" checked
+2. Add a meaningful label like "TEMPLATE: order request"
+3. Later: Find in history → Edit & Send with modifications
 
 ### Performance Tips
 
-For large queues:
-- Use filters to narrow down results
-- Don't browse more messages than necessary
-- Close unused connections to free resources
-- Periodically clean up old history entries
+For large queues (1000+ messages):
+- Use filters to narrow results
+- Don't load more than needed
+- Close unused connections
+- Periodically clean old history
 
-### Debugging Messages
+### Working with Multiple Environments
 
-1. Send a message and keep the confirmation dialog open
-2. Check the broker logs simultaneously
-3. Use status bar messages to track operations
-4. Check history to verify what was actually sent
+Create connections for each environment:
+- `DEV-Artemis` → development server
+- `TEST-IBM-MQ` → testing queue manager
+- `PROD-Artemis` → production (read-only recommended)
+
+Color-code with labels to avoid mistakes!
 
 ---
 
@@ -331,85 +398,100 @@ For large queues:
 
 ### Connection Issues
 
-**Problem**: "Cannot connect to broker"
-- ✓ Check hostname and port are correct
-- ✓ Verify network connectivity to broker
+**"Cannot connect to broker"**
+- ✓ Check hostname and port
+- ✓ Verify network connectivity
 - ✓ Check firewall rules
-- ✓ Ensure credentials are correct (if required)
-- ✓ Try test connection first
+- ✓ Try Test Connection button
 
-**Problem**: "Authentication failed"
+**"Authentication failed"**
 - ✓ Verify username and password
-- ✓ Check if account is enabled on broker
-- ✓ For IBM MQ, check CCSID and channel name
+- ✓ Check account is enabled on broker
+- ✓ For IBM MQ: verify CCSID and channel
+
+**Connection loads slowly**
+- This is normal for remote/slow brokers
+- Each connection loads independently
+- Other connections remain usable
+
+### Queue Issues
+
+**"Cannot see queues"**
+- ✓ Click arrow to expand connection
+- ✓ Wait for "Loading..." to complete
+- ✓ Check connection is still active
+- ✓ Try Refresh Queues from context menu
+
+**"Queue shows wrong count"**
+- Count updates on browse
+- Click Load more to refresh
+- Some brokers cache counts
 
 ### Message Issues
 
-**Problem**: "Cannot see my messages"
-- ✓ Check you're connected to correct broker
-- ✓ Select the correct queue from dropdown
-- ✓ Try clicking Refresh button
-- ✓ Check filter isn't hiding messages
+**"BYTES message shows Base64"**
+- Should auto-decode in detail view
+- Check encoding matches source
+- Try different encoding in settings
 
-**Problem**: "Message sending failed"
-- ✓ Check queue exists and is accessible
-- ✓ Verify message body is not empty
-- ✓ Check broker has space available
-- ✓ Try sending simpler test message first
+**"Special characters corrupted"**
+- Select correct encoding when sending
+- CP912 for Cyrillic
+- EBCDIC-US for mainframe
 
-**Problem**: "Special characters not displaying correctly"
-- ✓ For BytesMessage, select correct encoding (e.g., CP912 for Cyrillic)
-- ✓ Check message format in history matches source
-- ✓ Try UTF-8 encoding first (most compatible)
+**"Copy gives wrong content"**
+- Format first (JSON/XML button)
+- Then use Copy button
+- Copies formatted content
 
-### Performance Issues
+### Create Queue Fails
 
-**Problem**: "UI freezing when browsing large queue"
-- ✓ Use search/filter to narrow messages
-- ✓ Don't request more than 500 messages at once
-- ✓ Increase IDE memory: Edit configuration → increase Xmx
+**"Jolokia required"**
+- Enable Jolokia in connection settings
+- Provide Jolokia URL (e.g., `http://localhost:8161/console/jolokia`)
+- Requires broker configuration
 
-**Problem**: "History database growing too large"
-- ✓ Click **Clear Old** to remove messages older than N days
-- ✓ Delete specific labels/connections you no longer need
-- ✓ Regular maintenance keeps UI responsive
+**"Invalid JSON request"**
+- Update to latest plugin version
+- Check Jolokia endpoint is accessible
 
 ### Database Issues
 
-**Problem**: "History not working or showing errors"
-- ✓ Close the plugin (disconnect all)
-- ✓ Go to **~/.config/JetBrains/IntelliJIDEA*/system/jms-worker/**
-- ✓ Delete **message-history.db** file
-- ✓ Reopen plugin (database recreates automatically)
-- ⚠️ This deletes all history!
+**"History not working"**
+- Close all connections
+- Delete: `~/.config/JetBrains/IntelliJIdea*/jms-worker/message-history.db`
+- Restart plugin (recreates database)
+- ⚠️ Deletes all history!
+
+---
+
+## What's New in v1.2.0
+
+- 🚀 **Lazy loading**: Connections appear instantly
+- 📊 **Load more**: Pagination for large queues
+- 🔌 **Connection selector**: Choose server in send dialog
+- 🔄 **ASCII to HEX**: For IBM MQ correlation IDs
+- 📝 **BYTES decoding**: Readable content everywhere
+- 🎨 **Accent splitters**: Matches IDEA theme
+- 📋 **Copy formatted**: Copies JSON/XML as shown
+- ➕ **Create/Delete queues**: Via Jolokia API
 
 ---
 
 ## Getting Help
 
 ### In the IDE
+- **Status bar**: Shows operation status
+- **Tooltips**: Hover over fields
+- **Context menus**: Right-click for actions
 
-- **Status bar**: Shows current operation status and errors
-- **Log messages**: Right-click queue/connection for context menus
-- **Tool tips**: Hover over fields for inline help
-
-### Online Resources
-
-- **GitHub Issues**: Report bugs or request features
-- **Documentation**: Check the plugin documentation
-- **FAQ**: Common questions and solutions
-
----
-
-## What's Next?
-
-- Explore the **Message History** tab to organize your sent messages
-- Create connection profiles for all your environments (dev, test, prod)
-- Use labels to track important or test messages
-- Try the advanced operations (move, copy, purge) on test queues first
+### Online
+- **GitHub Issues**: Report bugs
+- **Documentation**: Full technical docs
+- **Changelog**: Version history
 
 ---
 
 **Happy message browsing! 🚀**
 
-For questions or issues, please check the plugin's GitHub repository or contact support.
+For questions or issues, please check the plugin's GitHub repository.
