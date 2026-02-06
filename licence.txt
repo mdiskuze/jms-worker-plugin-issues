@@ -1,0 +1,66 @@
+END USER LICENSE AGREEMENT FOR JMS WORKER PLUGIN
+
+Last updated: February 6, 2025
+
+IMPORTANT: PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE USING THIS SOFTWARE.
+
+1. DEFINITIONS
+
+"Software" means the JMS Worker Plugin for JetBrains IDEs, including all associated files, documentation, and updates.
+
+"Licensor" means MIRA.
+
+"User" or "You" means the individual or entity that downloads, installs, or uses the Software.
+
+2. GRANT OF LICENSE
+
+Subject to the terms of this Agreement, Licensor grants You a non-exclusive, non-transferable, limited license to:
+
+(a) Download, install, and use the Software for personal or commercial purposes;
+(b) Use the Software on any number of computers or devices owned or controlled by You;
+(c) Make copies of the Software for backup purposes only.
+
+3. RESTRICTIONS
+
+You may NOT:
+
+(a) Modify, adapt, translate, reverse engineer, decompile, disassemble, or create derivative works based on the Software;
+(b) Distribute, sublicense, lease, rent, loan, or otherwise transfer the Software to any third party;
+(c) Remove or alter any proprietary notices, labels, or marks on the Software;
+(d) Use the Software to develop a competing product;
+(e) Redistribute the Software's source code or any portion thereof.
+
+4. INTELLECTUAL PROPERTY
+
+The Software is protected by copyright laws and international treaties. Licensor retains all intellectual property rights in and to the Software. This Agreement does not grant You any rights to trademarks or service marks of Licensor.
+
+5. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+6. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+7. TERMINATION
+
+This license is effective until terminated. Your rights under this license will terminate automatically without notice if You fail to comply with any of its terms. Upon termination, You must destroy all copies of the Software in your possession.
+
+8. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws of the Czech Republic, without regard to its conflict of law provisions.
+
+9. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between You and Licensor concerning the Software and supersedes all prior or contemporaneous oral or written communications, proposals, and representations with respect to the Software.
+
+10. CONTACT INFORMATION
+
+For questions regarding this license, please contact:
+
+MIRA
+Email: mdiskuze@gmail.com
+
+By downloading, installing, or using the Software, You acknowledge that You have read this Agreement, understand it, and agree to be bound by its terms and conditions.
+
+Copyright (c) 2025 MIRA. All rights reserved.
