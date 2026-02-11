@@ -8,10 +8,11 @@ Welcome to the JMS Worker Plugin! This guide will help you get the most out of m
 3. [Managing Connections](#managing-connections)
 4. [Browsing Queues](#browsing-queues)
 5. [Sending Messages](#sending-messages)
-6. [Message History](#message-history)
-7. [Advanced Operations](#advanced-operations)
-8. [Tips & Tricks](#tips--tricks)
-9. [Troubleshooting](#troubleshooting)
+6. [Topics & Subscriptions](#topics--subscriptions)
+7. [Message History](#message-history)
+8. [Advanced Operations](#advanced-operations)
+9. [Tips & Tricks](#tips--tricks)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -42,11 +43,11 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 
 1. Click the **+** button in the Connections toolbar
 2. Fill in connection details:
-  - **Name**: Give your connection a meaningful name (e.g., "Dev Artemis")
-  - **Type**: Select "Artemis" or "IBM MQ"
-  - **Host**: Broker hostname
-  - **Port**: Broker port (usually 61616 for Artemis, 1414 for IBM MQ)
-  - **Username/Password**: Leave empty if not required
+- **Name**: Give your connection a meaningful name (e.g., "Dev Artemis")
+- **Type**: Select "Artemis" or "IBM MQ"
+- **Host**: Broker hostname
+- **Port**: Broker port (usually 61616 for Artemis, 1414 for IBM MQ)
+- **Username/Password**: Leave empty if not required
 3. Click **Test Connection** to verify
 4. Click **OK** to save
 
@@ -75,7 +76,7 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 #### Apache ActiveMQ Artemis
 - **Host/Port**: Direct TCP connection
 - **Credentials**: Optional username/password
-- **Jolokia** (optional): Enable for queue creation/deletion
+- **Jolokia** (optional): Enable for queue/topic creation/deletion and topic discovery
 
 #### IBM MQ
 - **Host/Port**: Queue manager connection
@@ -88,7 +89,7 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 
 Connections now use **lazy loading**:
 - All connections appear immediately in the tree
-- Queues load only when you **expand** a connection
+- Queues and topics load only when you **expand** a connection
 - Each connection loads independently (no waiting for slow servers)
 - Loading indicator shows "Loading..." while fetching queues
 
@@ -103,18 +104,24 @@ Before saving, always test your connection:
 ### Context Menu Actions
 
 Right-click on a **connection** for:
-- **Refresh Queues** - Reload queue list
-- **Edit Connection** - Modify settings
-- **Create Queue** - Create new queue (Artemis + Jolokia only)
-- **Send Message to...** - Open send dialog
-- **Connect/Disconnect** - Toggle connection state
-- **Delete Connection** - Remove from settings
+- **Refresh Queues** — Reload queue list
+- **Edit Connection** — Modify settings
+- **Create Queue** — Create new queue (Artemis + Jolokia only)
+- **Create Topic** — Create new topic (Artemis + Jolokia only)
+- **Send Message to...** — Open send dialog
+- **Connect/Disconnect** — Toggle connection state
+- **Delete Connection** — Remove from settings
 
 Right-click on a **queue** for:
-- **Browse Queue** - Load messages
-- **Send Message** - Send to this queue
-- **Delete Queue** - Remove queue (Artemis + Jolokia only)
-- **Purge Queue** - Delete all messages
+- **Browse Queue** — Load messages
+- **Send Message** — Send to this queue
+- **Delete Queue** — Remove queue (Artemis + Jolokia only)
+- **Purge Queue** — Delete all messages
+
+Right-click on a **topic** for:
+- **Subscribe to Topic** — Opens subscribe dialog with pre-filled topic name
+- **Publish to Topic** — Opens send dialog in topic mode
+- **Delete Topic** — Remove topic (Artemis + Jolokia only)
 
 ---
 
@@ -122,20 +129,29 @@ Right-click on a **queue** for:
 
 ### Tree Navigation
 
-The left panel shows a tree structure:
+The left panel shows a tree structure with Queues and Topics as separate categories:
 ```
 📁 Connections
-  ├── 🟢 Dev Artemis (5 queues)
-  │   ├── 📋 orders.queue (42)
-  │   ├── 📋 payments.queue (0)
-  │   └── ⚠️ DLQ (3)
+  ├── 🟢 Dev Artemis (7)
+  │   ├── 📋 Queues (5)
+  │   │   ├── orders.queue (42)
+  │   │   ├── payments.queue (0)
+  │   │   └── ⚠️ DLQ (3)
+  │   └── 📡 Topics (2)
+  │       ├── news.topic
+  │       └── events.topic ●
   └── 🔴 Prod IBM MQ (not connected)
 ```
 
 - 🟢 Green = Connected
 - 🔴 Red = Disconnected
 - ⚠️ Warning = DLQ with messages
-- Numbers in parentheses = message count
+- ● Green dot = Topic has active subscription
+- Numbers in parentheses = message count (auto-refreshed every 2 seconds)
+
+### Tree Stays Expanded
+
+Queue count refresh now updates individual queue labels without collapsing the tree. Your expanded connections, queues, and topics categories stay open.
 
 ### Simplified Queue Names
 
@@ -160,7 +176,7 @@ Use the filter field above the message table:
 ### Speed Search in Tree
 
 Just start typing while the tree is focused:
-- Matches queue names
+- Matches queue names and topic names
 - Press Enter to select match
 - Press Escape to cancel
 
@@ -192,14 +208,15 @@ BYTES messages are **automatically decoded**:
 
 ### Connection & Queue Selection
 
-The send dialog now includes **dropdowns**:
+The send dialog includes **dropdowns**:
 - **Connection**: Only shows connected servers
-- **Queue**: Dynamically loads queues for selected connection
-- You can also type a queue name manually
+- **Destination**: Switch between Queue and Topic mode
+- **Queue/Topic**: Dynamically loads items for selected connection
+- You can also type a name manually
 
 ### Basic Message
 
-1. Select connection and queue
+1. Select connection and destination (queue or topic)
 2. Choose **Message Format**: TextMessage or BytesMessage
 3. Type your message body
 4. Click **Send**
@@ -254,15 +271,85 @@ Expand **History** section:
 
 ---
 
+## Topics & Subscriptions
+
+### Overview
+
+The **Topics** tab provides real-time topic subscription management for Artemis connections. Topics are auto-discovered via Jolokia (MULTICAST addresses) and displayed under each connection in the tree.
+
+### Subscribing to a Topic
+
+**From the Topics tab:**
+1. Click the **▶ Subscribe** button in the toolbar
+2. Select connection and topic from dropdowns
+3. Optionally enable **Durable subscription** and enter a subscription name
+4. Optionally enter a **message selector** (JMS SQL-like syntax)
+5. Click **Subscribe**
+
+**From the connection tree:**
+1. Expand a connection → Topics category
+2. Right-click on a topic → **Subscribe to Topic**
+3. The subscribe dialog opens with the topic pre-filled
+4. After subscribing, the plugin switches to the Topics tab automatically
+
+### Subscription Indicators
+
+Active subscriptions are visible in two places:
+- **Connection tree**: Topics with active subscriptions show a green **●** indicator
+- **Topics tab**: Subscription list shows status icons (● active, ○ stopped, ✖ error)
+
+These indicators synchronize automatically — stopping or removing a subscription from the Topics tab immediately updates the tree, and vice versa.
+
+### Viewing Live Messages
+
+1. In the Topics tab, click on a subscription in the left list
+2. Incoming messages appear in the table in real-time
+3. Click a message to see full details (body + headers)
+4. Use **Auto-scroll** toggle to follow latest messages
+
+### Unread Message Badge
+
+When the Topics tab is not active (you're on Browser or History), incoming messages are counted as unread:
+- The tab title changes from **Topics** to **Topics (5)** showing the unread count
+- The badge resets automatically when you switch to the Topics tab
+- The JMS Worker tool window also activates to draw your attention on the first unread message
+
+### Publishing to a Topic
+
+**From the connection tree:**
+1. Right-click on a topic → **Publish to Topic**
+2. The Send Message dialog opens in **Topic mode** with the topic pre-selected
+3. Enter your message and click **Send**
+
+**From the Send Message dialog:**
+1. Change the **Destination** dropdown from "Queue" to "Topic"
+2. The destination list switches to available topics
+3. Select or type a topic name and send
+
+### Managing Subscriptions
+
+Right-click on a subscription in the Topics tab for:
+- **Stop Listening** — Pause the subscription (buffered messages kept)
+- **Clear Messages** — Remove buffered messages
+- **Remove Subscription** — Stop and remove entirely
+- **Remove Durable Subscription from Broker** — Delete the durable subscription on the broker (pending messages lost)
+
+### Topic Management (Artemis + Jolokia)
+
+- **Create Topic**: Right-click on connection → Create Topic, or right-click on Topics category → Create Topic
+- **Delete Topic**: Right-click on topic → Delete Topic (also removes durable subscriptions)
+
+---
+
 ## Message History
 
 ### Accessing History
 
-Click the **Message History** tab at the bottom of the tool window.
+Click the **History** tab at the bottom of the tool window.
 
 ### Same Detail View
 
-History now has the **same split panel** as the queue browser:
+History has the **same split panel** as the queue browser:
 - Body on the left with formatting
 - Headers on the right
 - JSON/XML format buttons
@@ -305,13 +392,22 @@ Requires Jolokia enabled in connection settings:
 1. Right-click on connection → **Create Queue...**
 2. Enter queue name (e.g., `my.new.queue`)
 3. Click OK
-4. Queue appears in tree after refresh
+4. Queue appears in tree immediately (targeted reload, no tree collapse)
 
-### Deleting Queues (Artemis)
+### Creating Topics (Artemis)
 
-1. Right-click on queue → **Delete Queue**
+Requires Jolokia enabled:
+
+1. Right-click on connection → **Create Topic...**
+2. Enter topic name (e.g., `my.new.topic`)
+3. Click OK
+4. Topic appears under the Topics category immediately
+
+### Deleting Queues/Topics (Artemis)
+
+1. Right-click on queue/topic → **Delete Queue** / **Delete Topic**
 2. Confirm deletion
-3. ⚠️ Messages in queue are lost!
+3. ⚠️ Messages in queue/topic are lost!
 
 ### Moving Messages
 
@@ -399,15 +495,15 @@ Color-code with labels to avoid mistakes!
 ### Connection Issues
 
 **"Cannot connect to broker"**
-- ✓ Check hostname and port
-- ✓ Verify network connectivity
-- ✓ Check firewall rules
-- ✓ Try Test Connection button
+- ✔ Check hostname and port
+- ✔ Verify network connectivity
+- ✔ Check firewall rules
+- ✔ Try Test Connection button
 
 **"Authentication failed"**
-- ✓ Verify username and password
-- ✓ Check account is enabled on broker
-- ✓ For IBM MQ: verify CCSID and channel
+- ✔ Verify username and password
+- ✔ Check account is enabled on broker
+- ✔ For IBM MQ: verify CCSID and channel
 
 **Connection loads slowly**
 - This is normal for remote/slow brokers
@@ -417,15 +513,31 @@ Color-code with labels to avoid mistakes!
 ### Queue Issues
 
 **"Cannot see queues"**
-- ✓ Click arrow to expand connection
-- ✓ Wait for "Loading..." to complete
-- ✓ Check connection is still active
-- ✓ Try Refresh Queues from context menu
+- ✔ Click arrow to expand connection
+- ✔ Wait for "Loading..." to complete
+- ✔ Check connection is still active
+- ✔ Try Refresh Queues from context menu
 
 **"Queue shows wrong count"**
-- Count updates on browse
-- Click Load more to refresh
-- Some brokers cache counts
+- Counts auto-refresh every 2 seconds in the background
+- Click on a queue to browse and get exact count
+- Try Refresh Queues from context menu for immediate update
+
+### Topic Issues
+
+**"No topics visible"**
+- ✔ Topics require Artemis with Jolokia enabled
+- ✔ Check Jolokia URL in connection settings
+- ✔ Topics must use MULTICAST routing type on the broker
+
+**"Publish to Topic does nothing"**
+- ✔ Ensure the Send Message dialog shows "Topic" in the destination dropdown
+- ✔ Verify the connection is active
+- ✔ Right-click → Publish to Topic automatically selects topic mode
+
+**"Subscription indicator not updating"**
+- The tree syncs automatically with the Topics tab
+- Try expanding/collapsing the connection to force refresh
 
 ### Message Issues
 
@@ -444,7 +556,7 @@ Color-code with labels to avoid mistakes!
 - Then use Copy button
 - Copies formatted content
 
-### Create Queue Fails
+### Create Queue/Topic Fails
 
 **"Jolokia required"**
 - Enable Jolokia in connection settings
@@ -465,13 +577,30 @@ Color-code with labels to avoid mistakes!
 
 ---
 
-## What's New in v1.2.0
+## What's New in v1.0.3
+
+- 📡 **Artemis topic support**: Auto-discovery, subscribe (durable/non-durable), live message feed
+- 🔔 **Unread badge**: Topics tab shows count of new messages when not active (e.g., "Topics (5)")
+- 📤 **Publish to topics**: Right-click → Publish to Topic from the connection tree
+- 🔄 **Subscription sync**: Active subscriptions reflected in the tree with ● indicator, synced in real-time
+- 🏗️ **UI refactoring**: Monolithic panel split into ConnectionTreeManager, TopicPanel, TreeModels
+- 🔧 **Tree stability**: Queue count refresh no longer collapses the tree
+- 🎯 **Targeted reload**: Creating/deleting queues or topics refreshes only the affected connection
+- 📡 **Topic management**: Create/delete topics, manage durable subscriptions via Jolokia
+
+## What's New in v1.0.2
+
+- 🔧 **Fixed queue creation**: Artemis queues now correctly created as ANYCAST
+- 🔄 **Live queue counts**: Message counts refresh every 2 seconds in background (Artemis + IBM MQ)
+- 🎨 **Proper tool window icons**: Light/dark theme support with correct selected state
+
+## What's New in v1.0.1
 
 - 🚀 **Lazy loading**: Connections appear instantly
 - 📊 **Load more**: Pagination for large queues
 - 🔌 **Connection selector**: Choose server in send dialog
 - 🔄 **ASCII to HEX**: For IBM MQ correlation IDs
-- 📝 **BYTES decoding**: Readable content everywhere
+- 🔍 **BYTES decoding**: Readable content everywhere
 - 🎨 **Accent splitters**: Matches IDEA theme
 - 📋 **Copy formatted**: Copies JSON/XML as shown
 - ➕ **Create/Delete queues**: Via Jolokia API
