@@ -90,7 +90,38 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 - **Queue Manager**: Queue manager name
 - **Channel**: Channel name (usually "DEV.APP.SVRCONN")
 - **CCSID**: Character encoding (usually 819 for UTF-8)
-- **Credentials**: Often required
+- **Authentication**: Choose from four modes:
+  - **None** — no credentials
+  - **Basic** — username + password
+  - **mTLS** — certificate-based only (keystore/truststore, no password)
+  - **Basic + mTLS** — both username/password and client certificate
+
+#### IBM MQ — mTLS (mutual TLS) setup
+
+When **mTLS** or **Basic + mTLS** is selected, an **SSL / TLS** section appears:
+
+| Field | Description |
+|-------|-------------|
+| **Keystore** | Path to `.p12` or `.jks` file containing the client certificate and private key |
+| **Keystore type** | `PKCS12` or `JKS` |
+| **Keystore password** | Password for the keystore file |
+| **Truststore** | Path to truststore file (optional — leave empty to use the JVM default trust store) |
+| **Truststore type** | `PKCS12` or `JKS` |
+| **Truststore password** | Password for the truststore file |
+| **Cipher suite** | TLS cipher suite name (see below) |
+| **Use IBM cipher mappings** | Controls cipher name format (see below) |
+
+**Cipher suite and IBM cipher mappings:**
+
+- If your broker uses **JSSE cipher names** (e.g. `TLS_AES_256_GCM_SHA384`): **uncheck** "Use IBM cipher mappings"
+- If your broker uses **IBM cipher names** (e.g. `*TLS13ORHIGHER`, `SSL_RSA_WITH_AES_256_CBC_SHA256`): **check** "Use IBM cipher mappings"
+
+Typical Spring Boot setup (`use-i-b-m-cipher-mappings: false`, cipher `*TLS13ORHIGHER`):
+1. Set **Authentication** to **mTLS**
+2. Set **Keystore** to your `.p12` file path and enter the keystore password
+3. Set **Cipher suite** to `*TLS13ORHIGHER`
+4. **Uncheck** "Use IBM cipher mappings"
+5. Leave Truststore empty (unless your broker uses a self-signed or private CA certificate)
 
 ### Connect and Disconnect
 
