@@ -8,11 +8,12 @@ Welcome to the JMS Worker Plugin! This guide will help you get the most out of m
 3. [Managing Connections](#managing-connections)
 4. [Browsing Queues](#browsing-queues)
 5. [Sending Messages](#sending-messages)
-6. [Topics & Subscriptions](#topics--subscriptions)
-7. [Message History](#message-history)
-8. [Advanced Operations](#advanced-operations)
-9. [Tips & Tricks](#tips--tricks)
-10. [Troubleshooting](#troubleshooting)
+6. [Message Templates](#message-templates)
+7. [Topics & Subscriptions](#topics--subscriptions)
+8. [Message History](#message-history)
+9. [Advanced Operations](#advanced-operations)
+10. [Tips & Tricks](#tips--tricks)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -44,9 +45,9 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 1. Click the **+** button in the Connections toolbar
 2. Fill in connection details:
 - **Name**: Give your connection a meaningful name (e.g., "Dev Artemis")
-- **Type**: Select "Artemis" or "IBM MQ"
+- **Type**: Select "Artemis", "ActiveMQ 5", or "IBM MQ"
 - **Host**: Broker hostname
-- **Port**: Broker port (usually 61616 for Artemis, 1414 for IBM MQ)
+- **Port**: Broker port (usually 61616 for Artemis/ActiveMQ 5, 1414 for IBM MQ)
 - **Username/Password**: Leave empty if not required
 3. Click **Test Connection** to verify
 4. Click **OK** to save
@@ -78,12 +79,25 @@ Once installed, you'll see a **JMS Worker** tool window at the bottom of your ID
 - **Credentials**: Optional username/password
 - **Jolokia** (optional): Enable for queue/topic creation/deletion and topic discovery
 
+#### ActiveMQ Classic 5.x
+- **Host/Port**: OpenWire connection (usually 61616)
+- **Credentials**: Optional for JMS, often required for web/Jolokia management
+- **Jolokia**: Use for queue/topic discovery and broker admin actions
+- **Default Jolokia path**: `/api/jolokia`
+
 #### IBM MQ
 - **Host/Port**: Queue manager connection
 - **Queue Manager**: Queue manager name
 - **Channel**: Channel name (usually "DEV.APP.SVRCONN")
 - **CCSID**: Character encoding (usually 819 for UTF-8)
 - **Credentials**: Often required
+
+### Connect and Disconnect
+
+- **Expanding** a connection node (click the arrow) connects if not yet connected and loads the queue list.
+- **Double-clicking** a disconnected connection node reconnects and loads queues immediately.
+- **Right-click → Disconnect** explicitly disconnects. Once disconnected, the plugin will not reconnect in the background — the "Disconnected" state is sticky until you explicitly reconnect.
+- The connection node collapses on disconnect and shows a "Loading..." placeholder so the expand arrow stays visible for the next connect.
 
 ### Lazy Loading
 
@@ -106,8 +120,8 @@ Before saving, always test your connection:
 Right-click on a **connection** for:
 - **Refresh Queues** — Reload queue list
 - **Edit Connection** — Modify settings
-- **Create Queue** — Create new queue (Artemis + Jolokia only)
-- **Create Topic** — Create new topic (Artemis + Jolokia only)
+- **Create Queue** — Create new queue (Artemis or ActiveMQ 5 + Jolokia)
+- **Create Topic** — Create new topic (Artemis or ActiveMQ 5 + Jolokia)
 - **Send Message to...** — Open send dialog
 - **Connect/Disconnect** — Toggle connection state
 - **Delete Connection** — Remove from settings
@@ -115,13 +129,13 @@ Right-click on a **connection** for:
 Right-click on a **queue** for:
 - **Browse Queue** — Load messages
 - **Send Message** — Send to this queue
-- **Delete Queue** — Remove queue (Artemis + Jolokia only)
+- **Delete Queue** — Remove queue (Artemis or ActiveMQ 5 + Jolokia)
 - **Purge Queue** — Delete all messages
 
 Right-click on a **topic** for:
 - **Subscribe to Topic** — Opens subscribe dialog with pre-filled topic name
 - **Publish to Topic** — Opens send dialog in topic mode
-- **Delete Topic** — Remove topic (Artemis + Jolokia only)
+- **Delete Topic** — Remove topic (Artemis or ActiveMQ 5 + Jolokia)
 
 ---
 
@@ -271,11 +285,59 @@ Expand **History** section:
 
 ---
 
+## Message Templates
+
+The **Templates** tab lets you save, organize, and reuse frequently sent messages.
+
+### Creating a Template
+
+1. Open the **Templates** tab at the bottom of the tool window
+2. Click **+** (New Template) in the toolbar
+3. Fill in the template:
+   - **Name**: Descriptive name shown in the list
+   - **Connection** and **Destination**: Optional — a template without these is portable across environments
+   - **Message body**: Can contain variables (see below)
+   - Message type, priority, TTL, correlation ID, and custom properties are all saved
+4. Click **Save**
+
+### Using a Template
+
+1. In the Templates tab, double-click a template (or right-click → **Use**)
+2. If the template has a connection and destination bound, the Send Message dialog opens pre-filled and ready to send
+3. If the template is missing a connection or destination, a small target dialog appears asking only for the missing values — fill them in and continue
+
+### Variable Substitution
+
+Template bodies support built-in and custom variables:
+
+| Variable | Value |
+|----------|-------|
+| `{{uuid}}` | Random UUID generated at send time |
+| `{{timestamp}}` | Current ISO-8601 timestamp |
+| `{{myVar}}` | Custom variable — prompted at send time |
+
+Example body:
+```json
+{"orderId": "{{uuid}}", "createdAt": "{{timestamp}}", "customerId": "{{customerId}}"}
+```
+Custom variables (`{{customerId}}` in the example) are collected in the Variables dialog before sending.
+
+### Managing Templates
+
+Right-click a template for:
+- **Use** — open in Send Message dialog
+- **Edit** — modify the template
+- **Duplicate** — copy for quick variation
+- **Delete** — remove
+- **Mark as Favorite** — pin to the top of the list (shown with star icon)
+
+---
+
 ## Topics & Subscriptions
 
 ### Overview
 
-The **Topics** tab provides real-time topic subscription management for Artemis connections. Topics are auto-discovered via Jolokia (MULTICAST addresses) and displayed under each connection in the tree.
+The **Topics** tab provides real-time topic subscription management for Artemis connections. Topics are auto-discovered via Jolokia (MULTICAST addresses) and displayed under each connection in the tree. ActiveMQ Classic 5.x also supports topic discovery, publishing, and topic create/delete via Jolokia.
 
 ### Subscribing to a Topic
 
@@ -334,10 +396,14 @@ Right-click on a subscription in the Topics tab for:
 - **Remove Subscription** — Stop and remove entirely
 - **Remove Durable Subscription from Broker** — Delete the durable subscription on the broker (pending messages lost)
 
-### Topic Management (Artemis + Jolokia)
+### Topic Management
 
-- **Create Topic**: Right-click on connection → Create Topic, or right-click on Topics category → Create Topic
-- **Delete Topic**: Right-click on topic → Delete Topic (also removes durable subscriptions)
+- **Artemis + Jolokia**:
+  - **Create Topic**: Right-click on connection → Create Topic, or right-click on Topics category → Create Topic
+  - **Delete Topic**: Right-click on topic → Delete Topic (also removes durable subscriptions)
+- **ActiveMQ 5 + Jolokia**:
+  - **Create Topic**: Right-click on connection → Create Topic
+  - **Delete Topic**: Right-click on topic → Delete Topic
 
 ---
 
@@ -385,7 +451,7 @@ BYTES messages are properly decoded:
 
 ## Advanced Operations
 
-### Creating Queues (Artemis)
+### Creating Queues
 
 Requires Jolokia enabled in connection settings:
 
@@ -394,7 +460,7 @@ Requires Jolokia enabled in connection settings:
 3. Click OK
 4. Queue appears in tree immediately (targeted reload, no tree collapse)
 
-### Creating Topics (Artemis)
+### Creating Topics
 
 Requires Jolokia enabled:
 
@@ -403,7 +469,7 @@ Requires Jolokia enabled:
 3. Click OK
 4. Topic appears under the Topics category immediately
 
-### Deleting Queues/Topics (Artemis)
+### Deleting Queues/Topics
 
 1. Right-click on queue/topic → **Delete Queue** / **Delete Topic**
 2. Confirm deletion
@@ -466,10 +532,10 @@ Use descriptive labels:
 
 ### Message Templates
 
-Store common messages in history:
-1. Send a message with "Save to history" checked
-2. Add a meaningful label like "TEMPLATE: order request"
-3. Later: Find in history → Edit & Send with modifications
+Use the **Templates** tab for messages you send repeatedly:
+- Save with variable placeholders (`{{uuid}}`, `{{timestamp}}`, custom vars) to get fresh values on every send
+- Leave connection/destination unbound for payloads you use across environments — the target dialog asks for them at send time
+- Mark frequently used templates as Favorites so they stay at the top of the list
 
 ### Performance Tips
 
@@ -523,12 +589,17 @@ Color-code with labels to avoid mistakes!
 - Click on a queue to browse and get exact count
 - Try Refresh Queues from context menu for immediate update
 
+**"IBM MQ queues show 0 messages (mTLS / app-only channel)"**
+- The plugin tries the fast PCF admin path first; if that channel does not have access to `SYSTEM.ADMIN.COMMAND.QUEUE`, it automatically falls back to a direct `MQOO_INQUIRE` open on each queue
+- The fallback requires only BROWSE and INQUIRE rights on the queues, no PCF admin rights
+- If counts still show 0, confirm the JMS user has at least BROWSE+INQUIRE on those queues
+
 ### Topic Issues
 
 **"No topics visible"**
-- ✔ Topics require Artemis with Jolokia enabled
+- ✔ Topics require broker management support with Jolokia enabled
 - ✔ Check Jolokia URL in connection settings
-- ✔ Topics must use MULTICAST routing type on the broker
+- ✔ Artemis topics must use MULTICAST routing type on the broker
 
 **"Publish to Topic does nothing"**
 - ✔ Ensure the Send Message dialog shows "Topic" in the destination dropdown
@@ -560,7 +631,7 @@ Color-code with labels to avoid mistakes!
 
 **"Jolokia required"**
 - Enable Jolokia in connection settings
-- Provide Jolokia URL (e.g., `http://localhost:8161/console/jolokia`)
+- Provide Jolokia URL (e.g., `http://localhost:8161/console/jolokia` for Artemis or `http://localhost:8161/api/jolokia` for ActiveMQ 5)
 - Requires broker configuration
 
 **"Invalid JSON request"**
@@ -577,33 +648,40 @@ Color-code with labels to avoid mistakes!
 
 ---
 
+## What's New in v1.3.0
+
+- **Disconnect is now truly final**: After clicking Disconnect, background polling and queue count refresh can no longer silently re-establish the connection. The Disconnected state is sticky until you explicitly reconnect.
+- **Double-click to reconnect**: Double-clicking a disconnected connection node now reconnects and loads queues, matching the initial-connect behaviour.
+- **Right-click no longer triggers browse**: Right-clicking a queue or topic only updates the selection context for the context menu — it no longer switches to the Browser tab or triggers a queue browse.
+- **Clean tree reset on disconnect**: The connection node collapses and resets to a "Loading..." placeholder on disconnect so the expand arrow stays visible and reconnect always works on the first try.
+- **Failed queue load retries**: A node stuck on "Error: ..." no longer blocks future load attempts — the next expand triggers a fresh retry.
+- **IBM MQ queue counts on mTLS and app-only channels**: Channels that do not have PCF admin access now fall back to a direct INQUIRE open, which requires only per-queue BROWSE+INQUIRE rights.
+
+## What's New in v1.2.0 / v1.2.1
+
+- **Message Templates**: Save, reuse, and parameterize frequently sent messages. Templates support variable substitution (`{{uuid}}`, `{{timestamp}}`, custom variables), connection/destination binding, and favorites. See the [Message Templates](#message-templates) section.
+- **Template target dialog**: Using a template without a bound connection or destination opens a lightweight dialog that asks only for the missing values at send time.
+- **Fixed**: Sending to a sorted paginated queue no longer resets the loaded range or makes new messages disappear.
+- **Fixed**: Newly sent messages keep a valid Message ID in the browser via broker send receipts.
+- **Fixed**: Artemis move message and topic publish indefinite block.
+- **Improved**: Reduced IDE freeze risk — tree search uses cached data, History reads moved off EDT, topic refresh throttled.
+
+## What's New in v1.1.0
+
+- **ActiveMQ Classic 5.x support**: Dedicated connection type with JMS and Jolokia-based management
+- **ActiveMQ Classic discovery**: Auto-discovery of queues and topics from broker management MBeans
+- **Classic admin actions**: Create/delete queues and topics, queue count, and purge via Jolokia
+- **No more blocking dialogs**: Connection test, send, move, and subscription operations no longer freeze the IDE
+- **Message body search**: Context-menu find with highlighted matches in Browser, Detail, History, and Send Message
+- **Unified body tools**: Consistent Plain / JSON / XML actions and bytes views across all message viewers
+
 ## What's New in v1.0.3
 
-- 📡 **Artemis topic support**: Auto-discovery, subscribe (durable/non-durable), live message feed
-- 🔔 **Unread badge**: Topics tab shows count of new messages when not active (e.g., "Topics (5)")
-- 📤 **Publish to topics**: Right-click → Publish to Topic from the connection tree
-- 🔄 **Subscription sync**: Active subscriptions reflected in the tree with ● indicator, synced in real-time
-- 🏗️ **UI refactoring**: Monolithic panel split into ConnectionTreeManager, TopicPanel, TreeModels
-- 🔧 **Tree stability**: Queue count refresh no longer collapses the tree
-- 🎯 **Targeted reload**: Creating/deleting queues or topics refreshes only the affected connection
-- 📡 **Topic management**: Create/delete topics, manage durable subscriptions via Jolokia
-
-## What's New in v1.0.2
-
-- 🔧 **Fixed queue creation**: Artemis queues now correctly created as ANYCAST
-- 🔄 **Live queue counts**: Message counts refresh every 2 seconds in background (Artemis + IBM MQ)
-- 🎨 **Proper tool window icons**: Light/dark theme support with correct selected state
-
-## What's New in v1.0.1
-
-- 🚀 **Lazy loading**: Connections appear instantly
-- 📊 **Load more**: Pagination for large queues
-- 🔌 **Connection selector**: Choose server in send dialog
-- 🔄 **ASCII to HEX**: For IBM MQ correlation IDs
-- 🔍 **BYTES decoding**: Readable content everywhere
-- 🎨 **Accent splitters**: Matches IDEA theme
-- 📋 **Copy formatted**: Copies JSON/XML as shown
-- ➕ **Create/Delete queues**: Via Jolokia API
+- **Artemis topic support**: Auto-discovery, subscribe (durable/non-durable), live message feed
+- **Unread badge**: Topics tab shows count of new messages when not active (e.g., "Topics (5)")
+- **Publish to topics**: Right-click → Publish to Topic from the connection tree
+- **Subscription sync**: Active subscriptions reflected in the tree with indicator, synced in real-time
+- **Topic management**: Create/delete topics, manage durable subscriptions via Jolokia
 
 ---
 
