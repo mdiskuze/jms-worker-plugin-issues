@@ -146,6 +146,10 @@ Before saving, always test your connection:
 3. You'll see "Connection successful" or an error message
 4. Only save if the test passes
 
+### Duplicating a Connection
+
+In **Settings → Tools → JMS Worker**, select an existing connection in the list and click the **Copy** icon in the toolbar above the list. A new-connection dialog opens with every field — including credentials, keystore paths, and SSL settings — pre-filled from the source. The name is set to `<original> (copy)` (or `(copy 2)`, `(copy 3)`, … if a copy already exists) so you can save immediately. Tweak whatever differs (typically host or environment-specific values) and hit OK. Useful for cloning a dev connection into a UAT one without retyping everything.
+
 ### Context Menu Actions
 
 Right-click on a **connection** for:
@@ -576,6 +580,65 @@ For large queues (1000+ messages):
 - Close unused connections
 - Periodically clean old history
 
+### Reading the Queue Tree
+
+Each queue in the connection tree shows its current depth as `(N)` next to the name. The icon, name color, and count color jointly reflect the queue's state. **Hover anywhere on the row** (over the icon or the text) to see a tooltip explaining the meaning and what action, if any, it suggests.
+
+| State | Icon | Name + count | When |
+|---|---|---|---|
+| Empty | default queue | grey `(0)` | Queue has no messages. |
+| Normal | default queue | regular `(N)` | 1–100 messages — normal operation. |
+| Backlog | information | bold orange `(N)` | More than 100 messages — possible backlog, check that consumers are running. |
+| Dead-letter / error | warning | bold red `(N)` | Queue name contains `DLQ`, `dead`, or `error` (case-insensitive) AND it has messages. These were rejected by their original destination and need investigation. |
+| Depth unknown | error | italic grey **name** + `(?)` | The plugin couldn't read this queue's depth — the broker rejected the depth request (typically `MQRC_NOT_AUTHORIZED` 2035 on IBM MQ). Browse / send / subscribe still work if you have those rights. To restore the depth badge, ask your MQ admin to grant `+dsp` (and `+inq`) on this queue. |
+
+### Column widths persist across restarts
+
+Resize a column in any data table — queue browser, message history, templates, live topic messages — and the new width is saved automatically. The next time you open the IDE the table picks up where you left off. Each table remembers its own widths independently.
+
+### Performance & Polling Settings (v1.4.0+)
+
+A new section in **Settings → Tools → JMS Worker → Performance** controls the background polling and timeout behavior. Defaults are tuned for daily use; tweak only if you see broker-side log noise or want a snappier UI.
+
+| Setting | Default | What it does |
+|---|---|---|
+| Auto-refresh queue counts in tree | on | Master switch for the background queue depth poller. Turning it off stops all "(N)" badge updates in the tree but does not affect Browse / Send / Subscribe. |
+| Refresh interval | 5 s | How often the poller runs. The poller hits only **expanded** connection nodes — collapse a connection to silence its polling without disabling it globally. |
+| Topic message coalescing window | 150 ms | Live topic messages are batched per window before being pushed to the UI. Higher values keep the UI smoother under heavy throughput at the cost of slightly delayed visibility. |
+| Connection close timeout | 3 s | Per-connection wall-clock cap when shutting the IDE down or clicking Disconnect / Disconnect All. Prevents a hung broker from stalling the UI. |
+| Jolokia HTTP connect timeout | 5 s | Applies to Apache Artemis and ActiveMQ Classic management calls. |
+| Jolokia HTTP read timeout | 5 s | Applies to Apache Artemis and ActiveMQ Classic management calls. |
+
+**IBM MQ note:** if your channel rejects queue depth probes with `MQRC_NOT_AUTHORIZED` (2035), the plugin pauses further probes — no more per-tick log spam in the broker. The pause is per-queue when only individual queues are inaccessible (other queues on the same connection keep updating); it widens to the whole connection only when the channel itself has no admin access. Either form clears the next time you reconnect. If you want depth polling permanently silent for a specific environment, turn the global "Auto-refresh queue counts" off in Settings.
+
+**IBM MQ depths showing as zero or missing?** The batched wildcard depth call needs **`+dsp`** (display) authority on each queue, in addition to the usual `+inq`. Without `+dsp`, the broker silently drops queues from the response. Ask your MQ admin to grant:
+
+```
+setmqaut -m <QM> -t queue -n 'YOUR.PREFIX.**' -p <user> +dsp
+```
+
+The plugin falls back to a per-queue lookup for queues missing from the batched response, which works with just `+inq` but is one round-trip per queue — slower for big queue lists.
+
+### How Credentials Are Stored
+
+The plugin stores all sensitive values exclusively in the IDE's credential store (`PasswordSafe`), the same mechanism IntelliJ uses for Git and database credentials. This applies to:
+
+- Connection passwords (Basic auth)
+- Keystore passwords (mTLS)
+- Truststore passwords (mTLS)
+
+The plugin's settings file holds only non-sensitive metadata: connection name, host, port, channel, queue manager, paths to keystore/truststore files, cipher suite. The settings file never contains your passwords.
+
+**One-time migration:** if you used an older version that may have left plaintext credentials in the settings file, the first launch of 1.4.0 moves any plaintext value into the credential store and rewrites the settings file without them. No action needed on your side.
+
+**Recommendation for sensitive environments:** the default credential-store backend on Linux is a file inside your IntelliJ config directory. For better protection, switch to the OS keyring under **Settings → Appearance & Behavior → System Settings → Passwords → "In native keychain"**:
+
+- Linux: libsecret (GNOME Keyring / KWallet)
+- macOS: Keychain
+- Windows: Credential Manager
+
+Note that the keystore file itself (`.p12` / `.jks`) lives wherever you placed it on disk. The keystore password protects the private key inside, but file-level access controls are still your responsibility. Keep the keystore out of source control and out of cloud sync directories.
+
 ### Working with Multiple Environments
 
 Create connections for each environment:
@@ -679,6 +742,23 @@ Color-code with labels to avoid mistakes!
 
 ---
 
+## What's New in v1.4.0
+
+- **Editor and tab-switch responsiveness**: the IDE no longer slows down while a connection is active in the background.
+- **Batched queue depth refresh**: the tree's queue counts now refresh with a single broker call per connection per tick (previously one call per queue). Default refresh interval bumped from 2 s to 5 s.
+- **Polls only what you can see**: collapsing a connection in the tree silences its background polling without disabling the global setting.
+- **In-place tree updates**: refresh redraws only the queues whose count actually changed — the tree no longer flickers or collapses during refresh.
+- **Topic message coalescing**: live topic messages are batched into a small window before reaching the UI; high-throughput topics no longer freeze the IDE.
+- **Fast IDE shutdown and Disconnect**: closing connections is bounded by a hard timeout. A hung or unreachable broker can no longer stall IDE exit; per-connection Disconnect over VPN that previously took 25–30 s is now sub-second.
+- **IBM MQ — broker-side log flood fixed**: when a depth probe is rejected with `MQRC_NOT_AUTHORIZED` (2035), the plugin pauses probes — per-queue when only individual queues are inaccessible (other queues on the same connection keep updating), connection-wide only when the channel itself has no admin access. Cooldown clears on the next reconnect.
+- **IBM MQ — mTLS connection setup unified**: removes a class of issues where background admin requests appeared to the broker as a different identity than the one configured by the user.
+- **Security**: passwords (connection, keystore, truststore) are stored exclusively in the IDE credential store. A one-time migration scrubs any plaintext that older versions could leave in the settings file. See "How Credentials Are Stored" above.
+- **New Performance settings**: Tools → JMS Worker → Performance lets you tune refresh interval, coalesce window, and connection/HTTP timeouts.
+- **Queue tree now communicates state**: each queue's icon, name color, count color, and hover tooltip jointly tell you whether it's empty, normal, backlogged, a dead-letter queue with messages waiting, or whether the broker has refused to disclose its depth. See "Reading the Queue Tree" above.
+- **Column widths are remembered across restarts**: once you resize a column in any data table (browser / history / templates / topic messages) the new width persists.
+- **Report a Problem**: a new action in the tool window toolbar (next to Settings) and every error notification opens a pre-filled GitHub issue page in your browser. See "Reporting a Problem" below.
+- **Duplicate Connection** in plugin settings: clones an existing connection (every field, including credentials and keystore paths) into a fresh dialog with `(copy)` appended to the name — handy for spinning up a near-identical environment without retyping host, port, channel, etc.
+
 ## What's New in v1.3.0
 
 - **Disconnect is now truly final**: After clicking Disconnect, background polling and queue count refresh can no longer silently re-establish the connection. The Disconnected state is sticky until you explicitly reconnect.
@@ -723,9 +803,19 @@ Color-code with labels to avoid mistakes!
 - **Tooltips**: Hover over fields
 - **Context menus**: Right-click for actions
 
+### Reporting a Problem
+
+Two ways to file an issue without leaving the IDE:
+
+1. **Tool window toolbar** → "Report a Problem" (globe icon, next to Settings).
+2. **From an error balloon** — every connection-error notification has a "Report this" button that pre-fills the failing connection and error message.
+
+Both open the same dialog where you fill in title, description (Markdown is supported), and an optional contact. Submitting opens a pre-filled GitHub "New Issue" page in your default browser. You sign in to GitHub with your normal browser session to post the issue — the plugin itself does not call any API and does not store any GitHub credentials.
+
+The dialog has an "Include diagnostics" checkbox (on by default) that appends a metadata block to the issue body containing plugin and IDE version, JVM, OS, and how many connections of each type are configured. **Connection names, hosts, and credentials are never included**. There is also a direct link to the issues page if you'd rather skip the form and write the issue manually.
+
 ### Online
-- **GitHub Issues**: Report bugs
-- **Documentation**: Full technical docs
+- **GitHub Issues**: <https://github.com/mdiskuze/jms-worker-plugin-issues/issues> — see also the in-IDE "Report a Problem" action above.
 - **Changelog**: Version history
 
 ---
