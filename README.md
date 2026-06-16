@@ -752,6 +752,10 @@ Color-code with labels to avoid mistakes!
 
 ---
 
+## What's New in v1.4.2
+
+- **Maintenance release**: internal compatibility cleanup for current IntelliJ Platform APIs (flagged by JetBrains Marketplace verification). No functional changes — includes the v1.4.1 message-delete fix below.
+
 ## What's New in v1.4.1
 
 - **Fixed: deleting a message now works**. Selecting a message in the queue browser and choosing Delete (toolbar, right-click → Delete Messages, or the Delete key) previously did nothing — no error, the message stayed. Delete now permanently removes the selected message(s) on IBM MQ and Apache Artemis, refreshes the queue, and tells you in the status bar how many were deleted, not found, or failed. See "Deleting Messages" above. (Not available on ActiveMQ Classic — use Purge Queue there.)
