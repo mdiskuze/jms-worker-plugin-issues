@@ -524,6 +524,16 @@ Requires Jolokia enabled:
 3. Select target queue
 4. Original stays, copy created in target
 
+### Deleting Messages
+
+1. Select one or more messages (Ctrl+click for multi-select)
+2. Right-click → **Delete Messages**, or press the **Delete** key
+3. Confirm deletion
+4. The selected message(s) are permanently removed and the queue view refreshes; the status bar reports how many were deleted, not found, or failed
+5. ⚠️ Cannot be undone!
+
+Supported on IBM MQ and Apache Artemis. (On ActiveMQ Classic, single-message delete is not available — use Purge Queue instead.)
+
 ### Purging Queues
 
 1. Right-click on queue → **Purge Queue**
@@ -741,6 +751,10 @@ Color-code with labels to avoid mistakes!
 - ⚠️ Deletes all history!
 
 ---
+
+## What's New in v1.4.1
+
+- **Fixed: deleting a message now works**. Selecting a message in the queue browser and choosing Delete (toolbar, right-click → Delete Messages, or the Delete key) previously did nothing — no error, the message stayed. Delete now permanently removes the selected message(s) on IBM MQ and Apache Artemis, refreshes the queue, and tells you in the status bar how many were deleted, not found, or failed. See "Deleting Messages" above. (Not available on ActiveMQ Classic — use Purge Queue there.)
 
 ## What's New in v1.4.0
 
