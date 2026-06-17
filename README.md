@@ -752,6 +752,10 @@ Color-code with labels to avoid mistakes!
 
 ---
 
+## What's New in v1.4.3
+
+- **Maintenance release**: removes the internal IntelliJ Platform API flagged by JetBrains Marketplace verification (the plugin version is now injected at build time instead of read from a platform API). No functional changes — includes the v1.4.1 message-delete fix below.
+
 ## What's New in v1.4.2
 
 - **Maintenance release**: internal compatibility cleanup for current IntelliJ Platform APIs (flagged by JetBrains Marketplace verification). No functional changes — includes the v1.4.1 message-delete fix below.
